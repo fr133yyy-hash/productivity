@@ -40,12 +40,11 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:-
 .card-title { font-size:14px; font-weight:600; color:var(--text); margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .card-body { font-size:13px; color:var(--text2); line-height:1.45; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .card-date { font-size:11px; color:var(--text3); }
-.note-card-row { display:flex; align-items:flex-start; gap:8px; }
-.note-card-body { flex:1; min-width:0; }
-.note-card-actions { display:flex; flex-direction:column; gap:4px; flex-shrink:0; padding-top:2px; }
-.nca-btn { background:var(--bg3); border:1px solid var(--border); border-radius:7px; width:30px; height:30px; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
-.nca-btn:active { opacity:0.6; }
-.nca-del:active { background:#FCEBEB; border-color:#F7C1C1; }
+.note-swipe-wrap { position:relative; border-radius:var(--radius); overflow:hidden; margin-bottom:0; }
+.note-swipe-bg { position:absolute; inset:0; display:flex; border-radius:var(--radius); }
+.note-swipe-left { flex:1; background:#FCEBEB; display:flex; align-items:center; padding-left:16px; font-size:13px; color:#A32D2D; font-weight:600; }
+.note-swipe-right { flex:1; background:var(--teal-light); display:flex; align-items:center; justify-content:flex-end; padding-right:16px; font-size:13px; color:#085041; font-weight:600; }
+.note-swipe-wrap .card { margin-bottom:0; transform:translateX(0); transition:transform .15s; will-change:transform; }
 .tag { font-size:11px; font-weight:600; padding:2px 9px; border-radius:99px; background:var(--accent-light); color:#26215C; }
 .empty { text-align:center; padding:48px 20px; color:var(--text3); }
 .empty .eico { font-size:40px; margin-bottom:8px; }
@@ -100,21 +99,17 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:-
 .TASK_COLORS { display:none; }
 
 /* TASK CARD */
-.task-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:10px 12px; margin-bottom:6px; position:relative; overflow:hidden; touch-action:pan-y; }
-.task-card.allday { background:var(--accent-light); border-color:#AFA9EC; margin:4px 14px 0; }
-.task-card.done-card .tc-title { text-decoration:line-through; color:var(--text3); }
-.task-card.done-card { opacity:0.65; }
-.tc-row { display:flex; align-items:flex-start; gap:8px; }
-.tc-check { width:20px; height:20px; border-radius:6px; border:1.5px solid var(--border); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; margin-top:2px; cursor:pointer; }
-.tc-check.done { background:var(--teal); border-color:var(--teal); }
+.task-card { border-radius:var(--radius); padding:10px 14px; position:relative; overflow:hidden; touch-action:pan-y; }
+.task-card.done-card .tc-title { text-decoration:line-through; opacity:0.55; }
+.task-card.done-card { opacity:0.7; }
+.tc-row { display:flex; align-items:flex-start; gap:10px; }
+.tc-check { width:20px; height:20px; border-radius:6px; border:1.5px solid rgba(255,255,255,0.6); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; margin-top:2px; cursor:pointer; background:rgba(255,255,255,0.15); }
+.tc-check.done { background:rgba(255,255,255,0.5); border-color:rgba(255,255,255,0.8); }
 .tc-body { flex:1; min-width:0; }
-.tc-title { font-size:14px; font-weight:600; color:var(--text); }
-.tc-meta { font-size:11px; color:var(--text2); margin-top:2px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-.tc-desc { font-size:13px; color:var(--text2); margin-top:4px; line-height:1.4; }
-.tc-note-link { font-size:11px; color:var(--accent); margin-top:3px; }
-.tc-actions { display:flex; gap:4px; flex-shrink:0; }
-.tc-act { background:var(--bg3); border:1px solid var(--border); border-radius:6px; width:28px; height:28px; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
-.tc-act.del:active { background:#FCEBEB; }
+.tc-title { font-size:14px; font-weight:600; color:#fff; }
+.tc-meta { font-size:11px; color:rgba(255,255,255,0.75); margin-top:2px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.tc-desc { font-size:13px; color:rgba(255,255,255,0.8); margin-top:4px; line-height:1.4; }
+.tc-note-link { font-size:11px; color:rgba(255,255,255,0.9); margin-top:3px; }
 
 /* SWIPE */
 .task-swipe-wrap { position:relative; margin-bottom:6px; border-radius:var(--radius); overflow:hidden; }
@@ -492,34 +487,31 @@ function drawHome() {
   var ht=document.getElementById('hTasks');
   if(!td.length){ht.innerHTML='<div class="empty"><div class="eico">✅</div><div class="etxt">Задач нет.<br>Перейди в Календарь</div></div>';}
   else{
-    var html='<div class="card">';
-    for(var i=0;i<td.length;i++) html+='<div class="titem" data-id="'+td[i].id+'"><div class="tchk'+(td[i].done?' done':'')+'>'+(td[i].done?'✓':'')+'</div><div class="ttxt'+(td[i].done?' done':'')+'">'+esc(td[i].title)+'</div></div>';
+    var html='<div style="display:flex;flex-direction:column;gap:6px;">';
+    for(var i=0;i<td.length;i++){
+      var t=td[i], bgc=getColor(t.color||'gray');
+      var timeStr=(!t.allday&&t.timeStart)?(' 🕐 '+t.timeStart+(t.timeEnd?' — '+t.timeEnd:'')):'';
+      html+='<div class="task-card'+(t.done?' done-card':'')+'" data-id="'+t.id+'" style="background:'+bgc+';">'
+        +'<div class="tc-row">'
+        +'<div class="tc-check'+(t.done?' done':'')+'" data-id="'+t.id+'">'+(t.done?'✓':'')+'</div>'
+        +'<div class="tc-body">'
+        +'<div class="tc-title">'+esc(t.title)+'</div>'
+        +(timeStr?'<div class="tc-meta">'+timeStr+'</div>':'')
+        +'</div></div></div>';
+    }
     ht.innerHTML=html+'</div>';
-    ht.querySelectorAll('.titem').forEach(function(el){el.addEventListener('click',function(){toggleTask(+this.getAttribute('data-id'));}.bind(el));});
+    ht.querySelectorAll('.tc-check').forEach(function(el){el.addEventListener('click',function(e){e.stopPropagation();toggleTask(+this.getAttribute('data-id'));}.bind(el));});
   }
   var hn=document.getElementById('hNotes');
   var recent=notes.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);}).slice(0,3);
   if(!recent.length){hn.innerHTML='<div class="empty"><div class="eico">📓</div><div class="etxt">Заметок нет</div></div>';}
   else{
     hn.innerHTML=recent.map(noteCard).join('');
+    hn.querySelectorAll('.note-swipe-wrap').forEach(function(wrap){
+      bindNoteSwipe(wrap, false);
+    });
     hn.querySelectorAll('.card[data-id]').forEach(function(el){
-      el.addEventListener('click',function(e){
-        if(e.target.closest('.nca-btn'))return;
-        openNote(+this.getAttribute('data-id'));
-      }.bind(el));
-    });
-    hn.querySelectorAll('.nca-edit').forEach(function(btn){
-      btn.addEventListener('click',function(e){e.stopPropagation();openNoteSheet(+this.getAttribute('data-id'));}.bind(btn));
-    });
-    hn.querySelectorAll('.nca-del').forEach(function(btn){
-      btn.addEventListener('click',function(e){
-        e.stopPropagation();
-        var id=+this.getAttribute('data-id');
-        var n=notes.filter(function(x){return x.id===id;})[0]; if(!n)return;
-        if(!confirm('Удалить «'+n.title+'»?'))return;
-        notes=notes.filter(function(x){return x.id!==id;});
-        save('pn',notes); drawHome();
-      }.bind(btn));
+      el.addEventListener('click',function(){openNote(+this.getAttribute('data-id'));}.bind(el));
     });
   }
 }
@@ -557,18 +549,53 @@ function stripMd(s) {
     .replace(/^---$/gm, '')
     .trim();
 }
+function bindNoteSwipe(wrap, refresh) {
+  var card=wrap.querySelector('.card'); if(!card)return;
+  var id=+wrap.getAttribute('data-id');
+  var startX=0,startY=0,dx=0,swiping=false,THRESH=72;
+  function onStart(cx,cy){startX=cx;startY=cy;dx=0;swiping=true;}
+  function onMove(cx,cy){
+    if(!swiping)return;
+    var adx=cx-startX,ady=cy-startY;
+    if(Math.abs(ady)>Math.abs(adx)+8){swiping=false;card.style.transform='';return;}
+    dx=adx;
+    card.style.transition='none';
+    card.style.transform='translateX('+Math.max(-130,Math.min(130,dx))+'px)';
+  }
+  function onEnd(){
+    if(!swiping)return; swiping=false;
+    card.style.transition='';
+    if(dx < -THRESH){
+      card.style.transform='translateX(-130px)';
+      var n=notes.filter(function(x){return x.id===id;})[0];
+      if(n&&confirm('Удалить «'+n.title+'»?')){
+        notes=notes.filter(function(x){return x.id!==id;});
+        save('pn',notes);
+        if(refresh) drawNotes(); else drawHome();
+      } else { card.style.transform=''; }
+    } else if(dx > THRESH){
+      card.style.transform='';
+      openNoteSheet(id);
+    } else { card.style.transform=''; }
+  }
+  card.addEventListener('touchstart',function(e){var t=e.touches[0];onStart(t.clientX,t.clientY);},{passive:true});
+  card.addEventListener('touchmove',function(e){var t=e.touches[0];onMove(t.clientX,t.clientY);},{passive:true});
+  card.addEventListener('touchend',onEnd);
+  card.addEventListener('mousedown',function(e){onStart(e.clientX,e.clientY);});
+  window.addEventListener('mousemove',function(e){if(swiping)onMove(e.clientX,e.clientY);});
+  window.addEventListener('mouseup',function(){if(swiping)onEnd();});
+}
+
 function noteCard(n) {
-  return '<div class="card" data-id="'+n.id+'">'
+  return '<div class="note-swipe-wrap" data-id="'+n.id+'">'
+    +'<div class="note-swipe-bg">'
+    +'<div class="note-swipe-right">✏ Изменить</div>'
+    +'<div class="note-swipe-left">🗑 Удалить</div>'
+    +'</div>'
+    +'<div class="card" data-id="'+n.id+'">'
     +'<div class="card-top">'+tagHTML(n.type)+'<span class="card-date">'+fmtShort(n.date)+'</span></div>'
-    +'<div class="note-card-row">'
-    +'<div class="note-card-body">'
     +'<div class="card-title">'+esc(n.title)+'</div>'
     +'<div class="card-body">'+esc(stripMd(n.body))+'</div>'
-    +'</div>'
-    +'<div class="note-card-actions">'
-    +'<button class="nca-btn nca-edit" data-id="'+n.id+'" title="Изменить">✏</button>'
-    +'<button class="nca-btn nca-del" data-id="'+n.id+'" title="Удалить">🗑</button>'
-    +'</div>'
     +'</div>'
     +'</div>';
 }
@@ -578,30 +605,11 @@ function drawNotes() {
   arr.sort(function(a,b){return new Date(b.date)-new Date(a.date);});
   if(!arr.length){list.innerHTML='<div class="empty"><div class="eico">📓</div><div class="etxt">Заметок нет.<br>Нажми «＋»</div></div>';return;}
   list.innerHTML=arr.map(noteCard).join('');
+  list.querySelectorAll('.note-swipe-wrap').forEach(function(wrap){
+    bindNoteSwipe(wrap, list===document.getElementById('nList'));
+  });
   list.querySelectorAll('.card[data-id]').forEach(function(el){
-    el.addEventListener('click', function(e){
-      if (e.target.closest('.nca-btn')) return;
-      openNote(+this.getAttribute('data-id'));
-    }.bind(el));
-  });
-  list.querySelectorAll('.nca-edit').forEach(function(btn){
-    btn.addEventListener('click', function(e){
-      e.stopPropagation();
-      openNoteSheet(+this.getAttribute('data-id'));
-    }.bind(btn));
-  });
-  list.querySelectorAll('.nca-del').forEach(function(btn){
-    btn.addEventListener('click', function(e){
-      e.stopPropagation();
-      var id = +this.getAttribute('data-id');
-      var n = notes.filter(function(x){return x.id===id;})[0];
-      if (!n) return;
-      if (!confirm('Удалить заметку «'+n.title+'»?')) return;
-      notes = notes.filter(function(x){return x.id!==id;});
-      save('pn', notes);
-      drawNotes();
-      drawHome();
-    }.bind(btn));
+    el.addEventListener('click', function(){ openNote(+this.getAttribute('data-id')); }.bind(el));
   });
 }
 function openNote(id) {
@@ -1003,18 +1011,7 @@ function drawDayTasks() {
   document.querySelectorAll('.tc-check').forEach(function(el){
     el.addEventListener('click',function(e){e.stopPropagation();toggleTask(+this.getAttribute('data-id'));}.bind(el));
   });
-  document.querySelectorAll('.tc-act-edit').forEach(function(el){
-    el.addEventListener('click',function(e){e.stopPropagation();openTaskSheet(+this.getAttribute('data-id'));}.bind(el));
-  });
-  document.querySelectorAll('.tc-act-del').forEach(function(el){
-    el.addEventListener('click',function(e){
-      e.stopPropagation();
-      var id=+this.getAttribute('data-id');
-      var t=tasks.filter(function(x){return x.id===id;})[0]; if(!t)return;
-      if(!confirm('Удалить «'+t.title+'»?'))return;
-      deleteTask(id);
-    }.bind(el));
-  });
+
 }
 
 function buildTaskCard(t, isAllDay) {
@@ -1028,13 +1025,13 @@ function buildTaskCard(t, isAllDay) {
   }
   var metaParts=[];
   if(timeStr) metaParts.push('🕐 '+timeStr);
-  if(t.color) metaParts.push('<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+color+';vertical-align:middle;"></span>');
   var noteLink='';
   if(t.linkedNoteId){
     var ln=notes.filter(function(n){return n.id===t.linkedNoteId;})[0];
     if(ln) noteLink='<div class="tc-note-link">📝 '+esc(ln.title)+'</div>';
   }
-  return '<div class="task-card tc-'+( t.color||'gray')+doneClass+alldayClass+'" data-id="'+t.id+'">'
+  var bgColor=getColor(t.color||'gray');
+  return '<div class="task-card'+doneClass+alldayClass+'" data-id="'+t.id+'" style="background:'+bgColor+';">'
     +'<div class="tc-row">'
     +'<div class="tc-check'+(t.done?' done':'')+'" data-id="'+t.id+'">'+(t.done?'✓':'')+'</div>'
     +'<div class="tc-body">'
@@ -1042,10 +1039,6 @@ function buildTaskCard(t, isAllDay) {
     +(metaParts.length?'<div class="tc-meta">'+metaParts.join(' ')+'</div>':'')
     +(t.desc?'<div class="tc-desc">'+esc(t.desc)+'</div>':'')
     +noteLink
-    +'</div>'
-    +'<div class="tc-actions">'
-    +'<button class="tc-act tc-act-edit" data-id="'+t.id+'">✏</button>'
-    +'<button class="tc-act tc-act-del del" data-id="'+t.id+'">🗑</button>'
     +'</div>'
     +'</div>'
     +'</div>';
